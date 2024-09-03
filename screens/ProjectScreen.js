@@ -1,40 +1,36 @@
-import React, { useEffect, useState, useContext } from "react";
-import { FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Text, Button } from "react-native";
+import React, { useEffect, useContext } from "react";
+import { FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Text, Button, Alert } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import AuthContext from "../context/AuthContext";
-import { deleteProject, getProjectList } from "../services/ProjectService";
+import { deleteProject } from "../services/ProjectService";
 import Icon from 'react-native-vector-icons/Ionicons';
+import ProjectContext from "../context/ProjectContext";
 
 export default function ProjectScreen({ navigation }) {
-
     const { user, setUser } = useContext(AuthContext);
-    const [projects, setProjects] = useState([]);
-    const [refreshing, setRefreshing] = useState(false);
+    const { fetchProjects, refreshing, projects } = useContext(ProjectContext);
 
-    // for auto refresh
-    // useFocusEffect(
-    //     React.useCallback(() => {
-    //         fetchProjects();
-    //     }, [])
-    // );
+    // Automatically refresh the project list when the screen comes into focus
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchProjects();
+        }, [])
+    );
 
     useEffect(() => {
         fetchProjects();
-    }, [])
+    }, []);
 
-    const fetchProjects = async () => {
-        setRefreshing(true);
-        const data = await getProjectList();
-        setProjects(data.data);
-        setRefreshing(false);
+    const handleDelete = async (id) => {
+        try {
+            await deleteProject(id);
+            Alert.alert("Success", "Project deleted successfully");
+            fetchProjects(); // Refresh the project list after deletion
+        } catch (error) {
+            console.error("Failed to delete project:", error);
+            Alert.alert("Error", "Failed to delete project");
+        }
     };
-
-    function handleDelete(id){
-        console.log('delete')
-        deleteProject(id)
-        const data = getProjectList();
-        setProjects(data)
-    }
 
     return (
         <SafeAreaView style={styles.container}>
@@ -43,13 +39,15 @@ export default function ProjectScreen({ navigation }) {
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                     <>
-                        <Text style={styles.item} onPress={()=>navigation.navigate('Detail Project', {id:item.id})}>{item.project_title}</Text>
+                        <Text style={styles.item} onPress={() => navigation.navigate('Detail Project', { id: item.id })}>
+                            {item.project_title}
+                        </Text>
                         <Text>{item.project_no}</Text>
-                        <Button title="Delete" onPress={() => handleDelete(item.id)}></Button>
+                        <Button title="Delete" onPress={() => handleDelete(item.id)} />
                     </>
                 )}
                 refreshing={refreshing}
-                onRefresh={fetchProjects}
+                onRefresh={fetchProjects} // Pull-to-refresh functionality
             />
             <TouchableOpacity 
                 style={styles.fab} 

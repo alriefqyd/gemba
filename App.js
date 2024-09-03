@@ -12,12 +12,16 @@ import { useState, useEffect } from 'react';
 import SplashScreen from './screens/SplashScreen';
 import AddProjectScreen from './screens/AddProjectScreen';
 import ProjectDetailScreen from './screens/ProjectDetailScreen';
+import { createAppContainer } from 'react-navigation';
+import { ProjectProvide, ProjectProvider } from './context/ProjectContext';
+import UpdateProjectScreen from './screens/UpdateProjectScreen';
 
+// Use createNativeStackNavigator from @react-navigation/native-stack
 const Stack = createNativeStackNavigator();
+const appContainer = createAppContainer(navigator)
 const Tab = createBottomTabNavigator();
 
 export default function App() {
-
   const [user, setUser] = useState();
   const [status, setStatus] = useState("loading");
 
@@ -57,6 +61,7 @@ export default function App() {
 
   return (
     <AuthContext.Provider value={{ user, setUser }}>
+      <ProjectProvider>
       <NavigationContainer>
         <Stack.Navigator
           screenOptions={{
@@ -69,37 +74,34 @@ export default function App() {
             },
           }}
         >
-          {
-            user ? (
-              // from this
-              // <Stack.Screen name='Home' component={HomeScreen}/>
-              <>
-                <Stack.Screen 
+          {user ? (
+            <>
+              <Stack.Screen 
                 name='Main' 
                 component={AuthenticatedTabs} 
                 options={{ headerShown: false }}  // Hide header for tab navigator
               />
-                <Stack.Screen name='Add Project' component={AddProjectScreen}/>
-                <Stack.Screen name='Detail Project' component={ProjectDetailScreen}/>
-              </>
-              
-            ) : (
-              <>
-                <Stack.Screen 
-                  name='Login' 
-                  component={LoginScreens}
-                  options={{ headerTitle: 'Login', headerShown: true }} // Custom header for Login
-                />
-                <Stack.Screen 
-                  name='Create account' 
-                  component={RegisterScreen}
-                  options={{ headerTitle: 'Register', headerShown: true }} // Custom header for Register
-                />
-              </>
-            )
-          }
+              <Stack.Screen name='Add Project' component={AddProjectScreen}/>
+              <Stack.Screen name='Detail Project' component={ProjectDetailScreen}/>
+              <Stack.Screen name='Update Project' component={UpdateProjectScreen}/>
+            </>
+          ) : (
+            <>
+              <Stack.Screen 
+                name='Login' 
+                component={LoginScreens}
+                options={{ headerTitle: 'Login', headerShown: true }} // Custom header for Login
+              />
+              <Stack.Screen 
+                name='Create account' 
+                component={RegisterScreen}
+                options={{ headerTitle: 'Register', headerShown: true }} // Custom header for Register
+              />
+            </>
+          )}
         </Stack.Navigator>
       </NavigationContainer>
+      </ProjectProvider>
     </AuthContext.Provider>
   );
 }

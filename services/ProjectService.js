@@ -21,4 +21,9 @@ export async function deleteProject(id){
     return data;
 }
 
+export async function updateProject(id,payload) {
+    const {data} = await axios.put(`/project/${id}`,payload);
+    return data;
+}
+
 

@@ -1,25 +1,26 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet } from 'react-native';
-import { getProjectDetail } from "../services/ProjectService";
+import React, { useEffect, useState, useContext } from "react";
+import { View, Text, StyleSheet, Button } from 'react-native';
+import { useFocusEffect } from "@react-navigation/native";
+import ProjectContext from "../context/ProjectContext";
 
 const ProjectDetailScreen = ({ route, navigation }) => {
     const { id } = route.params; // Destructure id directly from route.params
     const [result, setResult] = useState(null);
+    const { fetchProjectDetail, currentProject } = useContext(ProjectContext);
 
+    // Fetch project details every time the screen comes into focus
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchProjectDetail(id);
+        }, [id])
+    );
+
+    // Update the `result` state when `currentProject` changes
     useEffect(() => {
-        if (id) { // Check if id is available
-            fetchProjects(id);
+        if (currentProject) {
+            setResult(currentProject);
         }
-    }, [id]); // Add id as a dependency to refetch if it changes
-
-    const fetchProjects = async (id) => {
-        try {
-            const data = await getProjectDetail(id);
-            setResult(data.data); // Assuming data is already the project detail
-        } catch (error) {
-            console.error("Failed to fetch project detail:", error);
-        }
-    };
+    }, [currentProject]);
 
     return (
         <View style={styles.container}>
@@ -29,7 +30,7 @@ const ProjectDetailScreen = ({ route, navigation }) => {
                     <Text>Title: {result.project_title}</Text>
                     <Text>No: {result.project_no}</Text>
                     <Text>Area: {result.project_area}</Text>
-                    {/* Add more details as necessary */}
+                    <Button title="Edit" onPress={() => navigation.navigate('Update Project', { id: result.id })} />
                 </>
             ) : (
                 <Text>Loading...</Text>
