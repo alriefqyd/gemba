@@ -23,7 +23,6 @@ export const ProjectProvider = ({ children }) => {
         try {
             const data = await getProjectDetail(id);
             setCurrentProject(data.data);  // Store the project data in context
-            console.log(data.data)
         } catch (error) {
             console.error("Failed to fetch project detail:", error);
         }

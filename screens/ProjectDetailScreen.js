@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, Text, StyleSheet, Button, FlatList } from 'react-native';
 import { useFocusEffect } from "@react-navigation/native";
 import ProjectContext from "../context/ProjectContext";
 
@@ -22,6 +22,19 @@ const ProjectDetailScreen = ({ route, navigation }) => {
         }
     }, [currentProject]);
 
+    // Function to render individual findings
+    const renderFinding = ({ item }) => (
+        <View style={styles.findingItem}>
+            <Text>Finding Description: {item.finding_description}</Text>
+            <Text>Action Description: {item.action_description}</Text>
+            <Text>Date: {item.date}</Text>
+            <Text>Finding Type: {item.finding_type}</Text>
+            <Text>Safety Officer: {item.safety_officer}</Text>
+            <Text>Status: {item.status}</Text>
+            <Text>Supervisor: {item.supervisor ? item.supervisor : 'N/A'}</Text>
+        </View>
+    );
+
     return (
         <View style={styles.container}>
             <Text>Project Detail</Text>
@@ -30,6 +43,18 @@ const ProjectDetailScreen = ({ route, navigation }) => {
                     <Text>Title: {result.project_title}</Text>
                     <Text>No: {result.project_no}</Text>
                     <Text>Area: {result.project_area}</Text>
+                    <Text>Findings:</Text>
+                    
+                    {result.findings && result.findings.length > 0 ? (
+                        <FlatList
+                            data={result.findings}
+                            keyExtractor={(item) => item.id.toString()}
+                            renderItem={renderFinding}
+                        />
+                    ) : (
+                        <Text>No findings available.</Text>
+                    )}
+
                     <Button title="Edit" onPress={() => navigation.navigate('Update Project', { id: result.id })} />
                 </>
             ) : (
@@ -43,6 +68,14 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         padding: 20,
+    },
+    findingItem: {
+        padding: 10,
+        marginVertical: 8,
+        backgroundColor: '#f9f9f9',
+        borderColor: '#ddd',
+        borderWidth: 1,
+        borderRadius: 5,
     },
 });
 

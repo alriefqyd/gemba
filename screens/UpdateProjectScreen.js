@@ -1,9 +1,10 @@
-import { Alert, Button, SafeAreaView, StyleSheet, View } from "react-native";
+import { Alert, Button, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 import FormTextField from "../components/FormTextFields";
 import { useState, useContext, useEffect } from "react";
 import AuthContext from "../context/AuthContext";
 import { getProjectDetail, saveProject, updateProject } from "../services/ProjectService";
 import ProjectContext from "../context/ProjectContext";
+import FormProjectGroup from "../components/FormProjectGroup";
 
 export default function ({ route, navigation }) {
     const { setUser } = useContext(AuthContext);
@@ -14,6 +15,8 @@ export default function ({ route, navigation }) {
     const [projectStatus, setProjectStatus] = useState("");
     const [errors, setErrors] = useState({});
     const [project, setProject] = useState({});
+    const [findingList, setFindingList] = useState([{ finding_type: "", date: "", supervisor: "", safety_officer: "", finding_description:"", action_description: "" , status:"", id:""}]); // Initialize with one finding
+    
 
     const {fetchProjects,currentProject, setCurrentProject} = useContext(ProjectContext)
 
@@ -34,6 +37,7 @@ export default function ({ route, navigation }) {
             setProjectArea(data.data.project_area);
             setSafetyType(data.data.safety_type);
             setProjectStatus(data.data.status);
+            setFindingList(data.data.findings);
         } catch (error) {
             console.error("Failed to fetch project detail:", error);
         }
@@ -45,8 +49,7 @@ export default function ({ route, navigation }) {
                 project_title: projectTitle,
                 project_no: projectNo,
                 project_area: projectArea,
-                safety_type: safetyType,
-                status: projectStatus,
+                findings:findingList
             };
             const response = await updateProject(id, payload); // Pass id if it's an update, or remove id if it's a new project
             Alert.alert("Success", "Project saved successfully");
@@ -59,8 +62,27 @@ export default function ({ route, navigation }) {
         }
     };
 
+    const handleNewFinding = () => {
+        setFindingList([
+            ...findingList,
+            { finding_type: "", date: "", supervisor: "", safety_officer: "", finding_description:"", action_description: "" , status:"",id:""}
+        ]);
+    };
+
+    const handleFieldFinding = (index, field, value) => {
+        const updatedFindings = [...findingList];
+        //since we init finding list into an object and empty value each, index refer to num of order object and field refer to which field we eant to update value
+        updatedFindings[index][field] = value;
+        setFindingList(updatedFindings);
+    }
+
+    const handleDeleteFinding = (index) => {
+        setFindingList(findingList.filter((_, i) => i !== index));
+    };
+
     return (
         <SafeAreaView style={styles.wrapper}>
+            <ScrollView>
             <View style={styles.container}>
                 <FormTextField
                     label="Project Title"
@@ -80,20 +102,33 @@ export default function ({ route, navigation }) {
                     onChangeText={(e) => setProjectArea(e)}
                     errorMessage={errors.project_area}
                 />
-                <FormTextField
-                    label="Safety Type"
-                    value={safetyType}
-                    onChangeText={(e) => setSafetyType(e)}
-                    errorMessage={errors.safety_type}
-                />
-                <FormTextField
-                    label="Project Status"
-                    value={projectStatus}
-                    onChangeText={(e) => setProjectStatus(e)}
-                    errorMessage={errors.status}
-                />
-                <Button title="Save" onPress={handleSave} />
             </View>
+            <View style={{marginTop:"20px"}}>
+                {findingList && findingList.length > 0 ? findingList.map((finding, index) => (
+                        <FormProjectGroup
+                            key={index}
+                            findingType={finding.finding_type}
+                            date={finding.date}
+                            supervisor={finding.supervisor}
+                            safetyOfficer={finding.safety_officer}
+                            findingDescription={finding.finding_description}
+                            actionDescription={finding.action_description}
+                            status={finding.status}
+                            errors={errors}
+                            onFindingTypeChange={(value) => handleFieldFinding(index, 'finding_type', value)}
+                            onDateChange={(value) => handleFieldFinding(index, 'date', value)}
+                            onSupervisorChange={(value) => handleFieldFinding(index, 'supervisor', value)}
+                            onSafetyOfficerChange={(value) => handleFieldFinding(index, 'safety_officer', value)}
+                            onActionDescriptionChange={(value) => handleFieldFinding(index, 'action_description', value)}
+                            onFindingDescriptionChange={(value) => handleFieldFinding(index, 'finding_description', value)}
+                            onStatusChange={(value) => handleFieldFinding(index, 'status', value)}
+                            onDelete={() => handleDeleteFinding(index)}
+                        />
+                    )) : <Text>'Loading ...'</Text>}
+            </View>
+            <Button title="Add New Finding" onPress={handleNewFinding} />
+            <Button title="Save" onPress={handleSave} />
+            </ScrollView>
         </SafeAreaView>
     );
 }
