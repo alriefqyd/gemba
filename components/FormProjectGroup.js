@@ -1,17 +1,33 @@
-import { SafeAreaView, StyleSheet, TextInput, View } from "react-native";
+import { Image, SafeAreaView, StyleSheet, TextInput, View } from "react-native";
 import { Text } from "react-native";
 import FormTextField from "./FormTextFields";
 import { useState } from "react";
 import { Button } from "react-native";
+import { launchImageLibrary } from 'react-native-image-picker';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import DateTimePicker from '@react-native-community/datetimepicker';
+
+const imgDir = FileSystem.documentDirectory + 'images/';
+
+const ensureDirExists = async () => {
+    const dirInfo = await FileSystem.getInfoAsync(imgDir);
+    if(!dirInfo.exists){
+        await FileSystem.makeDirectoryAsync(imgDir, {intermediates:true});
+    }
+};
 
 function FormProjectGroup({ 
+    idx,
     findingType, 
     date, 
     supervisor, 
     safetyOfficer, 
     findingDescription, 
     actionDescription, 
-    status, 
+    status,
+    setImage,
+    onImageChange,
     onFindingTypeChange, 
     onDateChange, 
     onSupervisorChange, 
@@ -20,9 +36,50 @@ function FormProjectGroup({
     onActionDescriptionChange, 
     onStatusChange, 
     onDelete,
+    image,
     errors = {},
     ...rest  }) {
 
+    const [showDatePicker, setShowDatePicker] = useState(false);
+
+    const selectImage = async (useLibrary) => {
+        let permissionResult;
+        
+        if (useLibrary) {
+            permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        } else {
+            permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+        }
+
+        if (!permissionResult.granted) {
+            alert('Permission to access camera or media library is required!');
+            return;
+        }
+
+        let result;
+        if (useLibrary) {
+            result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                quality: 1
+            });
+        } else {
+            result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images
+            });
+        }
+
+        if (!result.canceled) {
+            const imageUri = result.assets[0].uri;
+            onImageChange(imageUri);  // Update the parent component with the image URI
+        }
+    };
+
+    const handleDateChange = (event, selectedDate) => {
+        setShowDatePicker(false);
+        if (selectedDate) {
+            onDateChange(selectedDate.toISOString().split('T')[0]); // Format date as YYYY-MM-DD
+        }
+    };
 
     return (
         <View style={styles.outerContainer}>
@@ -30,51 +87,54 @@ function FormProjectGroup({
                 <FormTextField
                     label="Finding Type"
                     value={findingType}
-                    onChangeText={(e) => onFindingTypeChange(e)}
-                    errorMessage={errors.findingType}  // Match the backend field name
+                    onChangeText={onFindingTypeChange}
+                    errorMessage={errors.findingType}
                 />
-                <FormTextField
-                    label="Date"
-                    value={date}
-                    onChangeText={(e) => onDateChange(e)}
-                    errorMessage={errors.date}  // Match the backend field name
-                />
+                <View>
+                    <Text>Date</Text>
+                    <Button title={date ? date : "Select Date"} onPress={() => setShowDatePicker(true)} />
+                    {showDatePicker && (
+                        <DateTimePicker
+                            value={date ? new Date(date) : new Date()}
+                            mode="date"
+                            display="default"
+                            onChange={handleDateChange}
+                        />
+                    )}
+                </View>
                 <FormTextField
                     label="Supervisor / PIC"
                     value={supervisor}
-                    onChangeText={(e) => onSupervisorChange(e)}
-                    errorMessage={errors.supervisor}  // Match the backend field name
+                    onChangeText={onSupervisorChange}
+                    errorMessage={errors.supervisor}
                 />
                 <FormTextField
                     label="Safety Officer"
                     value={safetyOfficer}
-                    onChangeText={(e) => onSafetyOfficerChange(e)}
-                    errorMessage={errors.safetyOfficer}  // Match the backend field name
+                    onChangeText={onSafetyOfficerChange}
+                    errorMessage={errors.safetyOfficer}
                 />
                 <FormTextField
                     label="Finding Description"
                     value={findingDescription}
-                    onChangeText={(e) => onFindingDescriptionChange(e)}
-                    errorMessage={errors.findingDescription}  // Match the backend field name
+                    onChangeText={onFindingDescriptionChange}
+                    errorMessage={errors.findingDescription}
                 />
                 <FormTextField
                     label="Action Description"
                     value={actionDescription}
-                    onChangeText={(e) => onActionDescriptionChange(e)}
-                    errorMessage={errors.actionDescription}  // Match the backend field name
+                    onChangeText={onActionDescriptionChange}
+                    errorMessage={errors.actionDescription}
                 />
                 <FormTextField
                     label="Status"
                     value={status}
-                    onChangeText={(e) => onStatusChange(e)}
-                    errorMessage={errors.status}  // Match the backend field name
+                    onChangeText={onStatusChange}
+                    errorMessage={errors.status}
                 />
-                <FormTextField
-                    label="Finding Picture"
-                    value=""
-                    // onChangeText={(e) => setProjectStatus(e)}
-                    errorMessage={errors.status}  // Match the backend field name
-                />
+                <Button title="Photo Library" onPress={() => selectImage(true)} />
+                <Button title="Capture Image" onPress={() => selectImage(false)} />
+                {image && <Image source={{ uri: image }} style={styles.image} />}
             </View>
             <Button title="Delete Finding" onPress={onDelete} />
         </View>
@@ -82,23 +142,6 @@ function FormProjectGroup({
 }
 
 const styles = StyleSheet.create({
-    label: {
-        color: "#334155",
-        fontWeight: '500'
-    },
-    textInput: {
-        backgroundColor: "#f1f5f9",
-        height: 40,
-        marginTop: 4,
-        borderWidth: 1,
-        borderRadius: 4,
-        borderColor: "#cbd5e1",
-        padding: 10
-    },
-    error: {
-        color: "red",
-        marginTop: 2
-    },
     outerContainer: {
         padding: 20,
     },
@@ -107,8 +150,16 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#cbd5e1",
         borderRadius: 8,
-        backgroundColor: "#ffffff", // Optional: To give the container a background color
+        backgroundColor: "#ffffff",
         rowGap: 16
+    },
+    image: {
+        width: 200,
+        height: 200,
+        marginTop: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#cbd5e1",
     }
 });
 

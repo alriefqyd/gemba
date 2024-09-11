@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { View, Text, StyleSheet, Button, FlatList } from 'react-native';
+import { View, Text, StyleSheet, Button, FlatList, Image } from 'react-native';
 import { useFocusEffect } from "@react-navigation/native";
 import ProjectContext from "../context/ProjectContext";
 
@@ -32,6 +32,8 @@ const ProjectDetailScreen = ({ route, navigation }) => {
             <Text>Safety Officer: {item.safety_officer}</Text>
             <Text>Status: {item.status}</Text>
             <Text>Supervisor: {item.supervisor ? item.supervisor : 'N/A'}</Text>
+            <Text>https://bba9-114-8-141-93.ngrok-free.app/{item.image}</Text>
+            {item.image && <Image source={{ uri: `http://localhost:8005/storage/${item.image}` }} style={styles.image} />}
         </View>
     );
 
@@ -77,6 +79,14 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderRadius: 5,
     },
+    image: {
+        width: 200,
+        height: 200,
+        marginTop: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#cbd5e1",
+    }
 });
 
 export default ProjectDetailScreen;

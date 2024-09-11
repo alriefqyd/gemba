@@ -33,6 +33,10 @@
     },
     "updates": {
       "url": "https://u.expo.dev/bcae4e3b-8e95-40fd-ae81-88e43a65bfc6"
+    },
+    "expo-image-picker": {
+      "photosPermission" : "Select and upload images.",
+      "cameraPermission" : "Allow ${PRODUCT_NAME} to access your camera."
     }
   }
 }

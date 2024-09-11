@@ -5,6 +5,7 @@ import AuthContext from "../context/AuthContext";
 import { getProjectDetail, saveProject, updateProject } from "../services/ProjectService";
 import ProjectContext from "../context/ProjectContext";
 import FormProjectGroup from "../components/FormProjectGroup";
+import { getToken } from "../services/TokenService";
 
 export default function ({ route, navigation }) {
     const { setUser } = useContext(AuthContext);
@@ -15,7 +16,8 @@ export default function ({ route, navigation }) {
     const [projectStatus, setProjectStatus] = useState("");
     const [errors, setErrors] = useState({});
     const [project, setProject] = useState({});
-    const [findingList, setFindingList] = useState([{ finding_type: "", date: "", supervisor: "", safety_officer: "", finding_description:"", action_description: "" , status:"", id:""}]); // Initialize with one finding
+    const [image, setImage] = useState({});
+    const [findingList, setFindingList] = useState([{ finding_type: "", date: "", supervisor: "", safety_officer: "", finding_description:"", action_description: "" , status:"", id:"", image:""}]); // Initialize with one finding
     
 
     const {fetchProjects,currentProject, setCurrentProject} = useContext(ProjectContext)
@@ -43,38 +45,96 @@ export default function ({ route, navigation }) {
         }
     };
 
-    const handleSave = async () => {
+    async function handleSave() {
+        setErrors({});
+    
+        const formData = new FormData();
+    
+        // Append project details
+        formData.append('project_title', projectTitle);
+        formData.append('project_no', projectNo);
+        formData.append('project_area', projectArea);
+        formData.append('project_id', id);
+        formData.append('_method', 'PUT');
+    
+
+        // Append each finding along with its image
+        findingList.forEach((finding, index) => {
+            // Only append the id if it exists, indicating an existing finding
+            if (finding.id) {
+                formData.append(`findings[${index}][id]`, finding.id);
+            }
+    
+            formData.append(`findings[${index}][finding_type]`, finding.finding_type);
+            formData.append(`findings[${index}][date]`, finding.date);
+            formData.append(`findings[${index}][supervisor]`, finding.supervisor);
+            formData.append(`findings[${index}][safety_officer]`, finding.safety_officer);
+            formData.append(`findings[${index}][finding_description]`, finding.finding_description);
+            formData.append(`findings[${index}][action_description]`, finding.action_description);
+            formData.append(`findings[${index}][status]`, finding.status);
+    
+            // Handle image upload, both for local and server-stored images
+            if (finding.image) {
+                if (finding.image.includes('file://')) {
+                    // For local file uploads
+                    formData.append(`findings[${index}][image]`, {
+                        uri: finding.image,
+                        name: `finding_${index}.jpg`,
+                        type: 'image/jpeg',
+                    });
+                } else {
+                    // For images already stored on the server
+                    formData.append(`findings[${index}][image]`, finding.image);
+                }
+            }
+        });
+
+    
         try {
-            const payload = {
-                project_title: projectTitle,
-                project_no: projectNo,
-                project_area: projectArea,
-                findings:findingList
-            };
-            const response = await updateProject(id, payload); // Pass id if it's an update, or remove id if it's a new project
-            Alert.alert("Success", "Project saved successfully");
-            // setCurrentProject(payload)
-            navigation.navigate("Detail Project", {id:id}); // Navigate back after saving
-            // fetchProjects();
-        } catch (error) {
-            console.error("Failed to save project:", error);
-            setErrors(error.response.data.errors || {});
+            const token = await getToken();
+            const response = await fetch(`http://localhost:8005/api/project/${id}`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    // Content-Type should be automatically set by fetch for multipart
+                    'Authorization': `Bearer ${token}`,  // If you're using token-based authentication
+                }
+            });
+    
+            if (!response.ok) {
+                const errorData = await response.json();
+                if (response.status === 422) {
+                    setErrors(errorData.errors);
+                } else {
+                    Alert.alert('Error', 'An error occurred while saving the project');
+                }
+            } else {
+                // Handle successful response
+                fetchProjects();  // Optionally refresh project list
+                navigation.navigate("Project");
+            }
+        } catch (e) {
+            console.error(e);
+            Alert.alert('Error', 'Failed to save the project');
         }
-    };
+    }
+    
 
     const handleNewFinding = () => {
         setFindingList([
             ...findingList,
-            { finding_type: "", date: "", supervisor: "", safety_officer: "", finding_description:"", action_description: "" , status:"",id:""}
+            { finding_type: "", date: "", supervisor: "", safety_officer: "", finding_description:"", action_description: "" , status:"",id:"", image:""}
         ]);
     };
 
     const handleFieldFinding = (index, field, value) => {
         const updatedFindings = [...findingList];
-        //since we init finding list into an object and empty value each, index refer to num of order object and field refer to which field we eant to update value
         updatedFindings[index][field] = value;
+        if (!updatedFindings[index].id) {
+            updatedFindings[index].id = null;  // Or set a default value
+        }
         setFindingList(updatedFindings);
-    }
+    };
 
     const handleDeleteFinding = (index) => {
         setFindingList(findingList.filter((_, i) => i !== index));
@@ -115,6 +175,8 @@ export default function ({ route, navigation }) {
                             actionDescription={finding.action_description}
                             status={finding.status}
                             errors={errors}
+                            image={finding.image.includes('file://') ? finding.image : `http://localhost:8005/storage/${finding.image}`}
+                            onImageChange={(value) => handleFieldFinding(index, 'image',value)}
                             onFindingTypeChange={(value) => handleFieldFinding(index, 'finding_type', value)}
                             onDateChange={(value) => handleFieldFinding(index, 'date', value)}
                             onSupervisorChange={(value) => handleFieldFinding(index, 'supervisor', value)}
