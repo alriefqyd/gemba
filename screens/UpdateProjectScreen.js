@@ -1,11 +1,26 @@
-import { Alert, Button, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+    Alert,
+    Button,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+    TouchableOpacity,
+} from "react-native";
 import FormTextField from "../components/FormTextFields";
-import { useState, useContext, useEffect } from "react";
+import { useState, useContext, useEffect, useLayoutEffect } from "react";
 import AuthContext from "../context/AuthContext";
-import { getProjectDetail, saveProject, updateProject } from "../services/ProjectService";
+import {
+    getProjectDetail,
+    saveProject,
+    updateProject,
+} from "../services/ProjectService";
 import ProjectContext from "../context/ProjectContext";
 import FormProjectGroup from "../components/FormProjectGroup";
 import { getToken } from "../services/TokenService";
+import { API_URL } from "../src/config";
+import Icon from "react-native-vector-icons/Ionicons";
 
 export default function ({ route, navigation }) {
     const { setUser } = useContext(AuthContext);
@@ -17,10 +32,22 @@ export default function ({ route, navigation }) {
     const [errors, setErrors] = useState({});
     const [project, setProject] = useState({});
     const [image, setImage] = useState({});
-    const [findingList, setFindingList] = useState([{ finding_type: "", date: "", supervisor: "", safety_officer: "", finding_description:"", action_description: "" , status:"", id:"", image:""}]); // Initialize with one finding
-    
+    const [findingList, setFindingList] = useState([
+        {
+            finding_type: "",
+            date: "",
+            supervisor: "",
+            safety_officer: "",
+            finding_description: "",
+            action_description: "",
+            status: "",
+            id: "",
+            image: "",
+        },
+    ]);
 
-    const {fetchProjects,currentProject, setCurrentProject} = useContext(ProjectContext)
+    const { fetchProjects, currentProject, setCurrentProject } =
+        useContext(ProjectContext);
 
     const { id } = route.params;
 
@@ -47,83 +74,89 @@ export default function ({ route, navigation }) {
 
     async function handleSave() {
         setErrors({});
-    
         const formData = new FormData();
-    
-        // Append project details
-        formData.append('project_title', projectTitle);
-        formData.append('project_no', projectNo);
-        formData.append('project_area', projectArea);
-        formData.append('project_id', id);
-        formData.append('_method', 'PUT');
-    
 
-        // Append each finding along with its image
+        formData.append("project_title", projectTitle);
+        formData.append("project_no", projectNo);
+        formData.append("project_area", projectArea);
+        formData.append("project_id", id);
+        formData.append("_method", "PUT");
+
         findingList.forEach((finding, index) => {
-            // Only append the id if it exists, indicating an existing finding
             if (finding.id) {
                 formData.append(`findings[${index}][id]`, finding.id);
             }
-    
             formData.append(`findings[${index}][finding_type]`, finding.finding_type);
             formData.append(`findings[${index}][date]`, finding.date);
             formData.append(`findings[${index}][supervisor]`, finding.supervisor);
-            formData.append(`findings[${index}][safety_officer]`, finding.safety_officer);
-            formData.append(`findings[${index}][finding_description]`, finding.finding_description);
-            formData.append(`findings[${index}][action_description]`, finding.action_description);
+            formData.append(
+                `findings[${index}][safety_officer]`,
+                finding.safety_officer
+            );
+            formData.append(
+                `findings[${index}][finding_description]`,
+                finding.finding_description
+            );
+            formData.append(
+                `findings[${index}][action_description]`,
+                finding.action_description
+            );
             formData.append(`findings[${index}][status]`, finding.status);
-    
-            // Handle image upload, both for local and server-stored images
+
             if (finding.image) {
-                if (finding.image.includes('file://')) {
-                    // For local file uploads
+                if (finding.image.includes("file://")) {
                     formData.append(`findings[${index}][image]`, {
                         uri: finding.image,
                         name: `finding_${index}.jpg`,
-                        type: 'image/jpeg',
+                        type: "image/jpeg",
                     });
                 } else {
-                    // For images already stored on the server
                     formData.append(`findings[${index}][image]`, finding.image);
                 }
             }
         });
 
-    
         try {
             const token = await getToken();
-            const response = await fetch(`http://localhost:8005/api/project/${id}`, {
-                method: 'POST',
+            const response = await fetch(`${API_URL}/api/project/${id}`, {
+                method: "POST",
                 body: formData,
                 headers: {
-                    // Content-Type should be automatically set by fetch for multipart
-                    'Authorization': `Bearer ${token}`,  // If you're using token-based authentication
-                }
+                    Authorization: `Bearer ${token}`,
+                },
             });
-    
+
             if (!response.ok) {
                 const errorData = await response.json();
                 if (response.status === 422) {
                     setErrors(errorData.errors);
                 } else {
-                    Alert.alert('Error', 'An error occurred while saving the project');
+                    Alert.alert("Error", "An error occurred while saving the project");
                 }
             } else {
-                // Handle successful response
-                fetchProjects();  // Optionally refresh project list
-                navigation.navigate("Project");
+                fetchProjects();
+                navigation.navigate("Reports");
             }
         } catch (e) {
             console.error(e);
-            Alert.alert('Error', 'Failed to save the project');
+            Alert.alert("Error", "Failed to save the project");
         }
     }
-    
 
     const handleNewFinding = () => {
         setFindingList([
             ...findingList,
-            { finding_type: "", date: "", supervisor: "", safety_officer: "", finding_description:"", action_description: "" , status:"",id:"", image:""}
+            {
+                finding_type: "",
+                date: "",
+                supervisor: "",
+                safety_officer: "",
+                finding_description: "",
+                action_description: "",
+                status: "",
+                id: "",
+                image: "",
+            },
         ]);
     };
 
@@ -131,7 +164,7 @@ export default function ({ route, navigation }) {
         const updatedFindings = [...findingList];
         updatedFindings[index][field] = value;
         if (!updatedFindings[index].id) {
-            updatedFindings[index].id = null;  // Or set a default value
+            updatedFindings[index].id = null;
         }
         setFindingList(updatedFindings);
     };
@@ -140,56 +173,118 @@ export default function ({ route, navigation }) {
         setFindingList(findingList.filter((_, i) => i !== index));
     };
 
+    useLayoutEffect(() => {
+        navigation.setOptions({
+            headerLeft: () => (
+                <TouchableOpacity
+                    onPress={() => navigation.navigate("Reports")}
+                    style={styles.backButton}
+                >
+                    <Icon name="arrow-back" size={24} color="#1A73E8" />
+                    <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+            ),
+            headerRight: () => (
+                <TouchableOpacity
+                    onPress={() => navigation.navigate("Update Reports", { id })}
+                    style={styles.editButton}
+                >
+                    <Icon name="pencil" size={24} color="#1A73E8" />
+                </TouchableOpacity>
+            ),
+        });
+    }, [navigation, id]);
+
     return (
         <SafeAreaView style={styles.wrapper}>
+            <View style={styles.header}>
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    style={styles.backButton}
+                >
+                    <Icon name="arrow-back" size={24} color="#ecb220" />
+                    <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
+                    <Icon name="save" size={24} color="#fff" />
+                    <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+            </View>
             <ScrollView>
-            <View style={styles.container}>
-                <FormTextField
-                    label="Project Title"
-                    value={projectTitle}
-                    onChangeText={(e) => setProjectTitle(e)}
-                    errorMessage={errors.project_title}
-                />
-                <FormTextField
-                    label="Project No"
-                    value={projectNo}
-                    onChangeText={(e) => setProjectNo(e)}
-                    errorMessage={errors.project_no}
-                />
-                <FormTextField
-                    label="Project Area"
-                    value={projectArea}
-                    onChangeText={(e) => setProjectArea(e)}
-                    errorMessage={errors.project_area}
-                />
-            </View>
-            <View style={{marginTop:"20px"}}>
-                {findingList && findingList.length > 0 ? findingList.map((finding, index) => (
-                        <FormProjectGroup
-                            key={index}
-                            findingType={finding.finding_type}
-                            date={finding.date}
-                            supervisor={finding.supervisor}
-                            safetyOfficer={finding.safety_officer}
-                            findingDescription={finding.finding_description}
-                            actionDescription={finding.action_description}
-                            status={finding.status}
-                            errors={errors}
-                            image={finding.image.includes('file://') ? finding.image : `http://localhost:8005/storage/${finding.image}`}
-                            onImageChange={(value) => handleFieldFinding(index, 'image',value)}
-                            onFindingTypeChange={(value) => handleFieldFinding(index, 'finding_type', value)}
-                            onDateChange={(value) => handleFieldFinding(index, 'date', value)}
-                            onSupervisorChange={(value) => handleFieldFinding(index, 'supervisor', value)}
-                            onSafetyOfficerChange={(value) => handleFieldFinding(index, 'safety_officer', value)}
-                            onActionDescriptionChange={(value) => handleFieldFinding(index, 'action_description', value)}
-                            onFindingDescriptionChange={(value) => handleFieldFinding(index, 'finding_description', value)}
-                            onStatusChange={(value) => handleFieldFinding(index, 'status', value)}
-                            onDelete={() => handleDeleteFinding(index)}
-                        />
-                    )) : <Text>'Loading ...'</Text>}
-            </View>
-            <Button title="Add New Finding" onPress={handleNewFinding} />
-            <Button title="Save" onPress={handleSave} />
+                <View style={styles.container}>
+                <Text style={styles.title}>Edit Report</Text>
+                    <FormTextField
+                        label="Project Title"
+                        value={projectTitle}
+                        onChangeText={(e) => setProjectTitle(e)}
+                        errorMessage={errors.project_title}
+                    />
+                    <FormTextField
+                        label="Project No"
+                        value={projectNo}
+                        onChangeText={(e) => setProjectNo(e)}
+                        errorMessage={errors.project_no}
+                    />
+                    <FormTextField
+                        label="Project Area"
+                        value={projectArea}
+                        onChangeText={(e) => setProjectArea(e)}
+                        errorMessage={errors.project_area}
+                    />
+                </View>
+                <View style={styles.findingsContainer}>
+                <Text style={styles.sectionTitle}>Findings</Text>
+                    {findingList.length > 0 ? (
+                        findingList.map((finding, index) => (
+                            <FormProjectGroup
+                                key={index}
+                                findingType={finding.finding_type}
+                                date={finding.date}
+                                supervisor={finding.supervisor}
+                                safetyOfficer={finding.safety_officer}
+                                findingDescription={finding.finding_description}
+                                actionDescription={finding.action_description}
+                                status={finding.status}
+                                errors={errors}
+                                image={
+                                    finding.image.includes("file://")
+                                        ? finding.image
+                                        : `${API_URL}/storage/${finding.image}`
+                                }
+                                onImageChange={(value) =>
+                                    handleFieldFinding(index, "image", value)
+                                }
+                                onFindingTypeChange={(value) =>
+                                    handleFieldFinding(index, "finding_type", value)
+                                }
+                                onDateChange={(value) =>
+                                    handleFieldFinding(index, "date", value)
+                                }
+                                onSupervisorChange={(value) =>
+                                    handleFieldFinding(index, "supervisor", value)
+                                }
+                                onSafetyOfficerChange={(value) =>
+                                    handleFieldFinding(index, "safety_officer", value)
+                                }
+                                onActionDescriptionChange={(value) =>
+                                    handleFieldFinding(index, "action_description", value)
+                                }
+                                onFindingDescriptionChange={(value) =>
+                                    handleFieldFinding(index, "finding_description", value)
+                                }
+                                onStatusChange={(value) =>
+                                    handleFieldFinding(index, "status", value)
+                                }
+                                onDelete={() => handleDeleteFinding(index)}
+                            />
+                        ))
+                    ) : (
+                        <Text>Loading...</Text>
+                    )}
+                    <TouchableOpacity style={styles.addButton} onPress={handleNewFinding}>
+                    <Text style={styles.buttonText}>Add New Finding</Text>
+                </TouchableOpacity>
+                </View>
             </ScrollView>
         </SafeAreaView>
     );
@@ -197,11 +292,68 @@ export default function ({ route, navigation }) {
 
 const styles = StyleSheet.create({
     wrapper: {
-        backgroundColor: "#fff",
+        backgroundColor: "#F7F9FC",
         flex: 1,
     },
     container: {
+        flex: 1,
         padding: 20,
-        rowGap: 16,
+        backgroundColor: '#F8F9FA',
+    },
+    header: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        padding: 15,
+        backgroundColor: "#f7f7f7",
+    },
+    backButton: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    backButtonText: {
+        fontSize: 16,
+        color: "#ecb220",
+        marginLeft: 5,
+    },
+    saveButton: {
+        backgroundColor: "#24695c",
+        flexDirection: "row",
+        padding: 8,
+        alignItems: "center",
+        borderRadius: 6,
+    },
+    saveButtonText: {
+        fontSize: 16,
+        color: "#fff",
+        marginLeft: 5,
+    },
+    findingsContainer: {
+        padding: 15,
+    },
+    addButton: {
+        backgroundColor: "#4CAF50",
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: "center",
+        marginVertical: 10,
+        marginBottom:80
+    },
+    buttonText: {
+        color: "#FFF",
+        fontWeight: "600",
+    },
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: '500',
+        color: "#555",
+        marginBottom: 10,
+    },
+    title: {
+        fontSize: 22,
+        fontWeight: '600',
+        color: "#333",
+        marginBottom: 15,
     },
 });
+

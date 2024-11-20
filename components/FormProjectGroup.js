@@ -1,4 +1,4 @@
-import { Image, SafeAreaView, StyleSheet, TextInput, View } from "react-native";
+import { Image, SafeAreaView, StyleSheet, TextInput, View, TouchableOpacity } from "react-native";
 import { Text } from "react-native";
 import FormTextField from "./FormTextFields";
 import { useState } from "react";
@@ -7,6 +7,8 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Picker } from "@react-native-picker/picker";
+import { FontAwesome } from '@expo/vector-icons'; // Importing icon library
 
 const imgDir = FileSystem.documentDirectory + 'images/';
 
@@ -84,6 +86,10 @@ function FormProjectGroup({
     return (
         <View style={styles.outerContainer}>
             <View style={styles.innerContainer}>
+                <TouchableOpacity style={styles.trashIcon} onPress={onDelete}>
+                    <FontAwesome name="trash" size={20} color="#FF6347" />
+                </TouchableOpacity>
+                
                 <FormTextField
                     label="Finding Type"
                     value={findingType}
@@ -136,14 +142,13 @@ function FormProjectGroup({
                 <Button title="Capture Image" onPress={() => selectImage(false)} />
                 {image && <Image source={{ uri: image }} style={styles.image} />}
             </View>
-            <Button title="Delete Finding" onPress={onDelete} />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
     outerContainer: {
-        padding: 20,
+        padding: 5,
     },
     innerContainer: {
         padding: 16,
@@ -151,7 +156,13 @@ const styles = StyleSheet.create({
         borderColor: "#cbd5e1",
         borderRadius: 8,
         backgroundColor: "#ffffff",
-        rowGap: 16
+        position: "relative", // Required for absolute positioning of the trash icon
+    },
+    trashIcon: {
+        position: "absolute",
+        bottom: 10,
+        right: 10,
+        zIndex: 1,
     },
     image: {
         width: 200,

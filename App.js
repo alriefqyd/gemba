@@ -15,6 +15,7 @@ import ProjectDetailScreen from './screens/ProjectDetailScreen';
 import { createAppContainer } from 'react-navigation';
 import { ProjectProvide, ProjectProvider } from './context/ProjectContext';
 import UpdateProjectScreen from './screens/UpdateProjectScreen';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 // Use createNativeStackNavigator from @react-navigation/native-stack
 const Stack = createNativeStackNavigator();
@@ -44,62 +45,93 @@ export default function App() {
   }
 
   const AuthenticatedTabs = () => (
-    <Tab.Navigator>
-      <Tab.Screen 
-        name="Home" 
-        component={HomeScreen}
-        options={{ headerTitle: 'Welcome Home', headerShown: true }}  // Custom header title for Home
-      />
-      <Tab.Screen 
-        name="Project" 
-        component={ProjectScreen} 
-        options={{ headerTitle: 'Your Projects', headerShown: true }}  // Custom header title for Project
-      />
-      {/* Add more screens as needed */}
-    </Tab.Navigator>
+    <Tab.Navigator
+    screenOptions={({ route }) => ({
+      tabBarIcon: ({ color, size }) => {
+        let iconName;
+
+        if (route.name === 'Home') {
+          iconName = 'home';
+        } else if (route.name === 'Reports') {
+          iconName = 'document-text';
+        } else if (route.name == 'Add Project') {
+          iconName = 'add-outline';
+        }
+
+        return <Ionicons name={iconName} size={size} color={color} />;
+      },
+      tabBarActiveTintColor: '#004d40',
+      tabBarInactiveTintColor: '#90a4ae',
+      tabBarLabelStyle: { fontSize: 12 },
+      tabBarStyle: {
+        height: 70,
+        paddingBottom: 10,
+        paddingTop: 10,
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        backgroundColor: '#f0f4f8',
+        position: 'absolute',
+      },
+    })}
+  >
+    <Tab.Screen
+      name="Home"
+      component={HomeScreen}
+      options={{ headerTitle: 'Reports', headerShown: true }}
+    />
+    <Tab.Screen
+      name="Add Project"
+      component={AddProjectScreen}  // Make sure this is the correct component
+      options={{ headerTitle: 'Add Project', headerShown: true }}
+    />
+    <Tab.Screen
+      name="Reports"
+      component={ProjectScreen}
+      options={{ headerTitle: 'Reports', headerShown: true }}
+    />
+  </Tab.Navigator>
   );
+  
 
   return (
     <AuthContext.Provider value={{ user, setUser }}>
       <ProjectProvider>
       <NavigationContainer>
-        <Stack.Navigator
-          screenOptions={{
-            headerStyle: {
-              backgroundColor: '#f4511e',
-            },
-            headerTintColor: '#fff',
-            headerTitleStyle: {
-              fontWeight: 'bold',
-            },
-          }}
-        >
-          {user ? (
-            <>
-              <Stack.Screen 
-                name='Main' 
-                component={AuthenticatedTabs} 
-                options={{ headerShown: false }}  // Hide header for tab navigator
-              />
-              <Stack.Screen name='Add Project' component={AddProjectScreen}/>
-              <Stack.Screen name='Detail Project' component={ProjectDetailScreen}/>
-              <Stack.Screen name='Update Project' component={UpdateProjectScreen}/>
-            </>
-          ) : (
-            <>
-              <Stack.Screen 
-                name='Login' 
-                component={LoginScreens}
-                options={{ headerTitle: 'Login', headerShown: true }} // Custom header for Login
-              />
-              <Stack.Screen 
-                name='Create account' 
-                component={RegisterScreen}
-                options={{ headerTitle: 'Register', headerShown: true }} // Custom header for Register
-              />
-            </>
-          )}
-        </Stack.Navigator>
+        <Stack.Navigator>
+  {user ? (
+    <>
+      <Stack.Screen
+        name="Main"
+        component={AuthenticatedTabs}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Update Reports"
+        component={UpdateProjectScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="Detail Reports"
+        component={ProjectDetailScreen}
+        options={{ headerShown: false }}
+      />
+    </>
+
+  ) : (
+    <>
+      <Stack.Screen 
+        name='Login' 
+        component={LoginScreens} 
+        options={{ headerTitle: 'Login', headerShown: true }}
+      />
+      <Stack.Screen 
+        name='Create account' 
+        component={RegisterScreen} 
+        options={{ headerTitle: 'Register', headerShown: true }}
+      />
+    </>
+  )}
+</Stack.Navigator>
       </NavigationContainer>
       </ProjectProvider>
     </AuthContext.Provider>

@@ -1,16 +1,15 @@
-import React, { useEffect, useContext } from "react";
-import { FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Text, Button, Alert } from "react-native";
+import React, { useEffect, useContext, useLayoutEffect } from "react";
+import { FlatList, SafeAreaView, StyleSheet, TouchableOpacity, Text, Alert, View, Image } from "react-native";
 import { useFocusEffect } from '@react-navigation/native';
 import AuthContext from "../context/AuthContext";
+import ProjectContext from "../context/ProjectContext";
 import { deleteProject } from "../services/ProjectService";
 import Icon from 'react-native-vector-icons/Ionicons';
-import ProjectContext from "../context/ProjectContext";
 
 export default function ProjectScreen({ navigation }) {
-    const { user, setUser } = useContext(AuthContext);
     const { fetchProjects, refreshing, projects } = useContext(ProjectContext);
+    const { user, setUser } = useContext(AuthContext);
 
-    // Automatically refresh the project list when the screen comes into focus
     useFocusEffect(
         React.useCallback(() => {
             fetchProjects();
@@ -21,42 +20,68 @@ export default function ProjectScreen({ navigation }) {
         fetchProjects();
     }, []);
 
-    const handleDelete = async (id) => {
-        try {
-            await deleteProject(id);
-            Alert.alert("Success", "Project deleted successfully");
-            fetchProjects(); // Refresh the project list after deletion
-        } catch (error) {
-            console.error("Failed to delete project:", error);
-            Alert.alert("Error", "Failed to delete project");
-        }
+    useLayoutEffect(() => {
+        navigation.setOptions({ headerShown: false });
+    }, [navigation]);
+
+    const handleDelete = (id) => {
+        Alert.alert(
+            "Delete Project",
+            "Are you sure you want to delete this project?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await deleteProject(id);
+                            Alert.alert("Success", "Project deleted successfully");
+                            fetchProjects();
+                        } catch (error) {
+                            console.error("Failed to delete project:", error);
+                            Alert.alert("Error", "Failed to delete project");
+                        }
+                    },
+                },
+            ]
+        );
     };
 
     return (
         <SafeAreaView style={styles.container}>
+            <View style={styles.header}>
+                <Text style={styles.headerText}>SIGEMOY</Text>
+                <TouchableOpacity onPress={() => setShowLogout(true)}>
+                    <Text>{user.name}</Text>
+                    {/* <Image source={require('../assets/setting-icon.png')} style={styles.settingsIcon} /> */}
+                </TouchableOpacity>
+            </View>
             <FlatList
                 data={projects}
-                keyExtractor={(item) => item.id}
+                style={{marginBottom:80}}
+                keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
-                    <>
-                        <Text style={styles.item} onPress={() => navigation.navigate('Detail Project', { id: item.id })}>
-                            {item.project_title}
-                        </Text>
-                        <Text>{item.project_no}</Text>
-                        <Button title="Delete" onPress={() => handleDelete(item.id)} />
-                    </>
+                    <View style={styles.projectCard}>
+                        <Image
+                            source={require('../assets/background.png')}
+                            style={styles.projectImage}
+                        />
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Detail Reports', { id: item.id })}
+                            style={styles.projectInfo}
+                        >
+                            <Text style={styles.projectTitle}>{item.project_title}</Text>
+                            <Text style={styles.projectNo}>{item.project_no}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
+                            <Icon name="trash-outline" size={24} color="#f4511e" />
+                        </TouchableOpacity>
+                    </View>
                 )}
                 refreshing={refreshing}
-                onRefresh={fetchProjects} // Pull-to-refresh functionality
+                onRefresh={fetchProjects}
             />
-            <TouchableOpacity 
-                style={styles.fab} 
-                onPress={() => {
-                    navigation.navigate("Add Project");
-                }}
-            >
-                <Icon name="add-circle" size={60} color="#f4511e" />
-            </TouchableOpacity>
         </SafeAreaView>
     );
 }
@@ -64,17 +89,61 @@ export default function ProjectScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        paddingTop: 22,
+        backgroundColor: '#f5f5f5',
     },
-    item: {
-        padding: 10,
-        fontSize: 18,
-        height: 44,
+    projectCard: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#fff',
+        padding: 16,
+        marginVertical: 8,
+        marginHorizontal: 16,
+        borderRadius: 8,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    projectImage: {
+        width: 50,
+        height: 50,
+        borderRadius: 8,
+        marginRight: 16,
+    },
+    projectInfo: {
+        flex: 1,
+    },
+    projectTitle: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#017f7c',
+    },
+    projectNo: {
+        fontSize: 14,
+        color: '#666',
+        marginTop: 4,
+    },
+    deleteButton: {
+        padding: 8,
     },
     fab: {
         position: 'absolute',
         right: 20,
-        bottom: 20,
-        backgroundColor: 'transparent',
+        bottom: 80,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+    },
+    headerText: {
+        fontSize: 18,
+        fontWeight: 'bold',
     },
 });
